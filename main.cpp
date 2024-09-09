@@ -4,6 +4,8 @@
 #include <chrono>
 #include <vector>
 #include "async.h"
+#include <boost/asio.hpp>
+#include <sstream>
 
 using namespace std;
 //--------------------------------------------------------------------------
@@ -93,12 +95,12 @@ class Tparser_cmd{
     Tparser_cmd(int N):N(N){
         current_poket = make_unique<Tpoket>();
     }
-    unique_ptr<Tpoket> operator()(string& cmd);
+    unique_ptr<Tpoket> operator()(string&& cmd);
     unique_ptr<Tpoket> return_out_poket(int& N_,string& cmd);
 };
 const string Tparser_cmd::brace_l = "{";
 const string Tparser_cmd::brace_r = "}";
-const string Tparser_cmd::delimetr = ",";
+const string Tparser_cmd::delimetr = ",";//",";
 unique_ptr<Tpoket> Tparser_cmd::return_out_poket(int& N_,string& cmd){
     N_ = N;
     current_poket->add_cmd(cmd);
@@ -106,9 +108,13 @@ unique_ptr<Tpoket> Tparser_cmd::return_out_poket(int& N_,string& cmd){
     current_poket = make_unique<Tpoket>();
     return out ;
 }
-unique_ptr<Tpoket> Tparser_cmd::operator()(string& cmd){
+unique_ptr<Tpoket> Tparser_cmd::operator()(string&& cmd){
         static int N_ = N;
         static int counter_brace = 0;
+
+        if(cmd==""){return return_out_poket(N_,cmd);}
+
+
         if(cmd==brace_l){
             counter_brace++;
             if(counter_brace==OPEN_BRACE){return return_out_poket(N_,cmd="");}
@@ -125,17 +131,63 @@ unique_ptr<Tpoket> Tparser_cmd::operator()(string& cmd){
         return make_unique<Tpoket>();
 }
 //--------------------------------------------------------------------------
+
+unique_ptr <Tparser_cmd> parser_cmd;
+Tlogger_to_queue logger_to_queue(3);
+
+void parser_bulk(std::string cmd){
+    unique_ptr <Tparser_cmd> parser_cmd =  make_unique<Tparser_cmd>(3);
+    Tlogger_to_queue logger_to_queue(3);
+
+//    auto it_cmd = istream_iterator<string>{cmd};
+    //istringstream sst(cmd);
+
+    istringstream iss(cmd);
+
+
+    while(iss){
+        string s;
+        iss >> s;
+        if(iss){
+            (*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
+        }
+    }
+
+
+    // auto s = iss.
+
+    // for(auto  s= istringstream(cmd).begin();s!=istringstream(cmd).end();s++){
+    //     if(*s!=-"\n")(*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
+    // }
+    // for(auto ch:cmd){
+    //  string s{ch};
+    //  if(s!="\n"){
+    //      (*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
+    //  }
+    // }
+    (*parser_cmd)("")->log_poket(logger_to_queue);
+}
+
+void signal_handler(int signal);
+//bulk_server 9000 3
+int main_client_server(const unsigned short g_port_num_);
 int main(int argc, char* argv[])
 {
 #if 1
+     signal(SIGINT, signal_handler);
+    if(argc == 1){return 0;}
+    parser_cmd =  make_unique<Tparser_cmd>( atoi(argv[2]));
+    main_client_server(atoi(argv[1]));
+#endif
+#if 0
     if(argc == 1){return 0;}
     unique_ptr <Tparser_cmd> parser_cmd =  make_unique<Tparser_cmd>( atoi(argv[1]));
     Tlogger_to_queue logger_to_queue(atoi(argv[1]));
     string cmd;
     while (getline(cin, cmd) && !cin.eof()) {
-        (*(*parser_cmd)(cmd)).log_poket(logger_to_queue);
+        (*(*parser_cmd)(std::move(cmd))).log_poket(logger_to_queue);
     }
-    (*(*parser_cmd)(cmd)).log_poket(logger_to_queue);
+    (*(*parser_cmd)(std::move(cmd))).log_poket(logger_to_queue);
 #endif
     return 0;
 }

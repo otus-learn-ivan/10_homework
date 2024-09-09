@@ -126,14 +126,14 @@ using namespace std;
     Treceive(size_t ID){
       ID_this = std::make_unique<size_t>(ID);
       log_qu = std::make_shared<Tthreadsafe_queue <std::shared_ptr<Tmessage>>>();
-      file_qu = std::make_shared<Tthreadsafe_queue <std::shared_ptr<Tmessage>>>();
       loger = std::make_unique<Tproducer>(ID, log_qu,[](size_t id, std::shared_ptr<Tmessage> msg ){
-              std::cout << "log id: " << id << " " << msg->get_msg() << std::endl;
+              std::string s(msg->get_msg().get(),msg->sz_msg);
+              std::cout << "log id: " << id << " " << std::string(msg->get_msg().get(),msg->sz_msg).c_str()<< std::endl;
             });
       log = std::jthread(*loger);
 
+      file_qu = std::make_shared<Tthreadsafe_queue <std::shared_ptr<Tmessage>>>();
       Twrite_to_file action_file_saver;
-
       file_saver = std::make_unique<Tproducer>(ID, file_qu,[action_file_saver](size_t id,std::shared_ptr<Tmessage> msg){
               action_file_saver.operator ()(id,msg);
       });
@@ -166,7 +166,7 @@ using namespace std;
   };
 
   size_t Tlibasync::connect(size_t ID){
-    std::cout << "!!! connect :" << ID << std::endl;
+    //std::cout << "!!! connect :" << ID << std::endl;
     if(map_receives.find(ID)== map_receives.end()){
       map_receives[ID] = std::make_unique<Treceive>(ID);
     }
@@ -179,7 +179,7 @@ using namespace std;
   }
 
   void Tlibasync::disconnect(size_t ID){
-    std::cout << "!!! disconnect :" << ID << std::endl;
+    //std::cout << "!!! disconnect :" << ID << std::endl;
     map_receives.erase(ID);
   }
 

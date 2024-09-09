@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.10)
 set(PATCH_VERSION "2" CACHE INTERNAL "Patch version")
 set(PROJECT_VESRION 0.1.${PATCH_VERSION})
 
-project(bulk_prg VERSION ${PROJECT_VESRION})
+project(bulk_server_prg VERSION ${PROJECT_VESRION})
 
-find_package(Boost COMPONENTS unit_test_framework REQUIRED)
-
+find_package(Boost COMPONENTS unit_test_framework  thread REQUIRED)
+#lboost_system
 # Библиотека libasync
 add_library(async SHARED libasync/async.cpp)
 #add_library(async STATIC libasync/async.cpp)
@@ -14,7 +14,9 @@ add_library(async SHARED libasync/async.cpp)
 install(TARGETS async DESTINATION /usr/local/lib)
 install(FILES async.h DESTINATION /usr/local/include)
 
-add_executable(bulk main.cpp)
+add_executable(bulk_server main.cpp
+    server.cpp
+    server.h)
 
 #add_executable(bulk main.cpp
 #    libasync/libasync.cpp
@@ -22,7 +24,8 @@ add_executable(bulk main.cpp)
 
 add_executable(test_bulk test_bulk.cpp)
 
-set_target_properties(bulk test_bulk async PROPERTIES
+
+set_target_properties(bulk_server test_bulk async PROPERTIES
     CXX_STANDARD 23
     CXX_STANDARD_REQUIRED ON
 )
@@ -34,7 +37,12 @@ set_target_properties(test_bulk PROPERTIES
     INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR}
 )
 
-target_link_libraries(bulk async)
+target_link_libraries(bulk_server async)
+#target_link_libraries(bulk_server Boost::thread)
+target_link_libraries(bulk_server
+    ${Boost_LIBRARIES}
+    #bulk_prg
+)
 
 #install(TARGETS main DESTINATION bin)
 #install(TARGETS bulk DESTINATION /usr/local/bin)
@@ -45,7 +53,7 @@ target_link_libraries(test_bulk
 )
 
 if (MSVC)
-    target_compile_options(bulk PRIVATE
+    target_compile_options(bulk_server PRIVATE
         /W4
     )
     target_compile_options(bulk_prg PRIVATE
@@ -55,7 +63,7 @@ if (MSVC)
         /W4
     )
 else ()
-    target_compile_options(bulk PRIVATE
+    target_compile_options(bulk_server PRIVATE
         -Wall -Wextra -pedantic -Werror
     )
 #    target_compile_options(bulk_prg PRIVATE
@@ -68,7 +76,7 @@ endif()
 
 
 
-install(TARGETS bulk RUNTIME DESTINATION bin)
+install(TARGETS bulk_server RUNTIME DESTINATION bin)
 
 set(CPACK_GENERATOR DEB)
 

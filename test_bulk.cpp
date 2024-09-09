@@ -18,6 +18,10 @@
 #include <chrono>
 
 #include <boost/test/unit_test.hpp>
+#include <boost/process.hpp>
+#include <iostream>
+#include <chrono>
+#include <signal.h>
 
 BOOST_AUTO_TEST_SUITE(test_bulk)
 
@@ -47,28 +51,28 @@ DIR *dir;
    std::sort(log_files.begin(),log_files.end());
    return log_files;
 }
-std::vector<std::string>  set_suit_cmd( std::vector<std::string>& commands ){
-    // Запускаем приложение bulk через popen
-    FILE* pipe = popen("./bulk 3", "w");
-    if (pipe == nullptr) {
-        std::cerr << "Ошибка запуска процесса bulk\n";
-        return std::vector<std::string>{};
-    }
-    // Отправляем команды с задержкой
-    for (const auto& cmd : commands) {
-        fprintf(pipe, "%s\n", cmd.c_str());
-        std::cout << cmd << std::endl;
-        // Читаем и выводим результат из pipe
-         char buffer[1024];
-         while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-             std::cout << "Получено: " << buffer << std::endl;
-         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));; // задержка в 1 секунду
-    }
-    // Закрываем поток для записи
-    pclose(pipe);
-    return created_files_log();
-}
+// std::vector<std::string>  set_suit_cmd( std::vector<std::string>& commands ){
+//     // Запускаем приложение bulk через popen
+//     FILE* pipe = popen("./bulk 9000 3", "w");
+//     if (pipe == nullptr) {
+//         std::cerr << "Ошибка запуска процесса bulk\n";
+//         return std::vector<std::string>{};
+//     }
+//     // Отправляем команды с задержкой
+//     for (const auto& cmd : commands) {
+//         fprintf(pipe, "%s\n", cmd.c_str());
+//         std::cout << cmd << std::endl;
+//         // Читаем и выводим результат из pipe
+//          char buffer[1024];
+//          while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+//              std::cout << "Получено: " << buffer << std::endl;
+//          }
+//         std::this_thread::sleep_for(std::chrono::milliseconds(100));; // задержка в 1 секунду
+//     }
+//     // Закрываем поток для записи
+//     pclose(pipe);
+//     return created_files_log();
+// }
 
 void print_file(std::string name_file){
     std::cout << name_file<<": ";
@@ -86,14 +90,39 @@ void print_file(std::string name_file){
 
 BOOST_AUTO_TEST_CASE(test_valid)
 {
-  // Формируем команды
-  std::vector<std::string> suit_commands1 = {"cmd1", "cmd2", "cmd3","cmd4","cmd5"};
-  set_suit_cmd(suit_commands1);
-  std::vector<std::string> suit_commands2 = {"cmd1", "cmd2","{", "cmd3","cmd4","}","{","cmd5","cmd6","{","cmd7","cmd8","}","cmd9","}","{","cmd10","cmd11"};
-  for (auto& files : set_suit_cmd(suit_commands2)){
+
+  //std::jthread b([](){system("./bulk_server 9000 3");});
+  //b.detach();
+
+    pid_t pid;
+
+     // Запуск bulk_server как отдельного процесса
+     if ((pid = fork()) == 0) {
+       // Код для bulk_server
+       system("./bulk_server 9000 3");
+       exit(0);
+     }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::jthread c1([](){system("seq 0 9 |   nc localhost 9000");});
+  std::jthread c2([](){system("seq 10 19 | nc localhost 9000");});
+
+  c1.join();
+  c2.join();
+
+
+  for (auto& files : created_files_log()){
       print_file(files);
   }
   system("rm *.log");
+
+  kill(pid, SIGINT);
+
+  std::cout <<"Ожидание завершения bulk_server pid: " <<pid <<std::endl;
+  //waitpid(pid, nullptr, 0);  // Ожидание завершения bulk_server
+
+  //b.request_stop();
+  //b.join();
 }
 
 BOOST_AUTO_TEST_SUITE_END()
