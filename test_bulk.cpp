@@ -90,18 +90,32 @@ void print_file(std::string name_file){
 
 BOOST_AUTO_TEST_CASE(test_valid)
 {
+   pid_t pid;
+   // Запуск bulk_server как отдельного процесса
+   if ((pid = fork()) == 0) {
+     // Код для bulk_server
+     system("./bulk_server 9000 3");
+     exit(0);
+   }
 
-  //std::jthread b([](){system("./bulk_server 9000 3");});
-  //b.detach();
+   std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    pid_t pid;
+   std::string command("pgrep bulk_server");
+   FILE* pipe = popen(command.c_str(), "r"); // Запускаем команду и получаем поток
 
-     // Запуск bulk_server как отдельного процесса
-     if ((pid = fork()) == 0) {
-       // Код для bulk_server
-       system("./bulk_server 9000 3");
-       exit(0);
+   if (pipe != nullptr) {
+     char buffer[128];
+     if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+       pid = std::stoi(buffer);
+       std::cout << "PID процесса bulk_server: " << pid << std::endl;
+     } else {
+       std::cerr << "Ошибка при чтении из потока" << std::endl;
      }
+    pclose(pipe);
+  } else {
+    std::cerr << "Ошибка при выполнении команды popen" << std::endl;
+  }
+
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   std::jthread c1([](){system("seq 0 9 |   nc localhost 9000");});
@@ -110,19 +124,16 @@ BOOST_AUTO_TEST_CASE(test_valid)
   c1.join();
   c2.join();
 
+  kill(pid, SIGINT);
 
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+  std::cout <<"Ожидание завершения bulk_server pid: " <<pid <<std::endl;
+  waitpid(pid, nullptr, 0);  // Ожидание завершения bulk_server
   for (auto& files : created_files_log()){
       print_file(files);
   }
   system("rm *.log");
-
-  kill(pid, SIGINT);
-
-  std::cout <<"Ожидание завершения bulk_server pid: " <<pid <<std::endl;
-  //waitpid(pid, nullptr, 0);  // Ожидание завершения bulk_server
-
-  //b.request_stop();
-  //b.join();
+  std::cout << "end" << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END()

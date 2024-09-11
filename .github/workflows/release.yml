@@ -42,7 +42,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./bulk_prg-0.1.${{ github.run_number }}-Linux.deb
-          asset_name: bulk_prg-0.1.${{ github.run_number }}-Linux.deb
+          asset_path: ./bulk_server_prg-0.1.${{ github.run_number }}-Linux.deb
+          asset_name: bulk_server_prg-0.1.${{ github.run_number }}-Linux.deb
           asset_content_type: application/vnd.debian.binary-package
 

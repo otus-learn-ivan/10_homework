@@ -133,61 +133,37 @@ unique_ptr<Tpoket> Tparser_cmd::operator()(string&& cmd){
 //--------------------------------------------------------------------------
 
 unique_ptr <Tparser_cmd> parser_cmd;
-Tlogger_to_queue logger_to_queue(3);
+unique_ptr <Tlogger_to_queue> logger_to_queue;
 
 void parser_bulk(std::string cmd){
-    unique_ptr <Tparser_cmd> parser_cmd =  make_unique<Tparser_cmd>(3);
-    Tlogger_to_queue logger_to_queue(3);
-
-//    auto it_cmd = istream_iterator<string>{cmd};
-    //istringstream sst(cmd);
-
+    if(cmd.size()==0)(*parser_cmd)("")->log_poket(*logger_to_queue);
     istringstream iss(cmd);
-
-
     while(iss){
         string s;
         iss >> s;
         if(iss){
-            (*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
+            (*parser_cmd)(std::move(s))->log_poket(*logger_to_queue);
         }
     }
-
-
-    // auto s = iss.
-
-    // for(auto  s= istringstream(cmd).begin();s!=istringstream(cmd).end();s++){
-    //     if(*s!=-"\n")(*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
-    // }
-    // for(auto ch:cmd){
-    //  string s{ch};
-    //  if(s!="\n"){
-    //      (*parser_cmd)(std::move(s))->log_poket(logger_to_queue);
-    //  }
-    // }
-    (*parser_cmd)("")->log_poket(logger_to_queue);
 }
 
-void signal_handler(int signal);
-//bulk_server 9000 3
+void signal_handler(int signal) {
+  if (signal == SIGINT) {
+//    (*parser_cmd)("")->log_poket(*logger_to_queue);
+    std::cout << "Получен сигнал SIGINT. Завершение работы..." <<std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    exit(0);
+  }
+}
 int main_client_server(const unsigned short g_port_num_);
 int main(int argc, char* argv[])
 {
 #if 1
-     signal(SIGINT, signal_handler);
+    std::signal(SIGINT, signal_handler);
     if(argc == 1){return 0;}
     parser_cmd =  make_unique<Tparser_cmd>( atoi(argv[2]));
+    logger_to_queue = make_unique<Tlogger_to_queue>( atoi(argv[2]));
     main_client_server(atoi(argv[1]));
-#endif
-#if 0
-    if(argc == 1){return 0;}
-    unique_ptr <Tparser_cmd> parser_cmd =  make_unique<Tparser_cmd>( atoi(argv[1]));
-    Tlogger_to_queue logger_to_queue(atoi(argv[1]));
-    string cmd;
-    while (getline(cin, cmd) && !cin.eof()) {
-        (*(*parser_cmd)(std::move(cmd))).log_poket(logger_to_queue);
-    }
-    (*(*parser_cmd)(std::move(cmd))).log_poket(logger_to_queue);
 #endif
     return 0;
 }
